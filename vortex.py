@@ -4,58 +4,60 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import RK45
 
-N = 100 # number of vortex
-epsilon = 0.005 # regularization factor (as proposed by Krasny)
+N = 400 # number of vortex
+epsilon = 0.5
 
-domain_size = 2.0
+halfN = 1.0/(2.0*N)
+eps2 = epsilon**2
+twopi = 2*np.pi
 
-x_0 = np.linspace(-domain_size/2,domain_size/2,N)
-y_0 = 0*x_0
+domain_size = 1.0
+
+intial_amplitude = 0.01
+initial_wave = intial_amplitude*np.sin(twopi*np.linspace(0,domain_size,N))
+
+x_0 = np.linspace(0,domain_size,N) + initial_wave
+y_0 = -initial_wave
+
 s_0 = np.concatenate((x_0,y_0))
 
 def rhs(t,s,):
     x, y = s[:N], s[N:]
     dsdt = np.zeros(2*N)
 
-    for i in range(N):
-        x_i, y_i = x[i], y[i]
+    for i in range(N):        
+        denominator = 1.0/ \
+            np.cosh(twopi*(y[i] - y)) - np.cos(twopi*(x[i] - x)) + eps2
         
-        # not working, probably due to self-induction singularity
-        # to fix!
-        dsdt[i] = (-1/(2*N))*np.sum(
-                np.sinh(2*np.pi*(y_i - y)) / (
-                    np.cosh(2*np.pi*(y_i - y)) - np.cos(2*np.pi*(x_i - x))
-                        + epsilon**2)
-            )
-        
-        dsdt[N+i] = (1/(2*N))*np.sum(
-                np.sin(2*np.pi*(x_i - x)) / (
-                    np.cosh(2*np.pi*(y_i - y)) - np.cos(2*np.pi*(x_i - x))
-                        + epsilon**2)
-            )
+        # no need to remove self-induction singularity if eps > 0
+        # sinh(0) = sin(0) = 0
+        dsdt[i]   = -halfN*np.sum( np.sinh(twopi*(y[i] - y)) * denominator )
+        dsdt[N+i] =  halfN*np.sum(  np.sin(twopi*(x[i] - x)) * denominator )
 
     return dsdt
 
-dt = 1/100
+dt = 1.0/20
 t_start = 0.0
-t_end = 100*dt
+t_end = 4.0
 
 sol = RK45(
     rhs,t_start,s_0,t_end,
-    #max_step=dt,
+    max_step=dt,
     vectorized=True
     )
 
 
 fig, ax = plt.subplots(1,1,layout='constrained')
-# ax.set_xlim([-1,1])
-ax.set_ylim([-0.01,0.01])
+
+ax.set_ylim([-0.3,0.3])
 
 i = 0
 t = t_start
-#while sol.t <= t_end:
-while i <= 1000:
+
+while sol.t <= t_end - dt:
     ax.plot(sol.y[:N],sol.y[N:],'-o')
+    ax.set_title(f't = {sol.t:0.3f}')
+
     fig.savefig(f'output/solution_{i:04d}.png')
     ax.lines[0].remove()
 
