@@ -27,7 +27,7 @@ def rhs(t,s,):
 
     for i in range(N):        
         denominator = 1.0/ \
-            np.cosh(twopi*(y[i] - y)) - np.cos(twopi*(x[i] - x)) + eps2
+            (np.cosh(twopi*(y[i] - y)) - np.cos(twopi*(x[i] - x)) + eps2)
         
         # no need to remove self-induction singularity if eps > 0
         # sinh(0) = sin(0) = 0
