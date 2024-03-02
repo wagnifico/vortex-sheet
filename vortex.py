@@ -1,8 +1,11 @@
 
 
+
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.integrate import RK45
+
+import matplotlib.pyplot as plt
+import imageio.v3 as iio
 
 N = 400 # number of vortex
 epsilon = 0.5
@@ -28,7 +31,6 @@ def rhs(t,s,):
     for i in range(N):        
         denominator = 1.0/ \
             (np.cosh(twopi*(y[i] - y)) - np.cos(twopi*(x[i] - x)) + eps2)
-        
         # no need to remove self-induction singularity if eps > 0
         # sinh(0) = sin(0) = 0
         dsdt[i]   = -halfN*np.sum( np.sinh(twopi*(y[i] - y)) * denominator )
@@ -54,13 +56,23 @@ ax.set_ylim([-0.3,0.3])
 i = 0
 t = t_start
 
+files = []
 while sol.t <= t_end - dt:
-    ax.plot(sol.y[:N],sol.y[N:],'-o')
+    ax.plot(sol.y[:N],sol.y[N:],'-ok')
     ax.set_title(f't = {sol.t:0.3f}')
 
-    fig.savefig(f'output/solution_{i:04d}.png')
-    ax.lines[0].remove()
+    filename = f'output/solution_{i:04d}.png'
+    fig.savefig(filename)
+    files.append(filename)
 
     i += 1
     print(f'{i:5>d} : {sol.t:.5e}')
     sol.step()
+    
+    ax.lines[0].remove()
+
+
+frames = np.stack([iio.imread(f) for f in files], axis = 0)
+
+print(f'Generating gif...')
+iio.imwrite('output/vortex.gif', frames)
