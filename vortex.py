@@ -15,27 +15,30 @@ eps2 = epsilon**2
 twopi = 2*np.pi
 
 domain_size = 2.0
+field_half_height = 0.25
 
 intial_amplitude = 0.01
 initial_wave = intial_amplitude*np.sin(twopi*np.linspace(0,domain_size,N))
 
-x_0 = np.linspace(0,domain_size,N) + initial_wave
-y_0 = -initial_wave
+vortex_x_0 = np.linspace(0,domain_size,N) + initial_wave
+vortex_y_0 = -initial_wave
 
-s_0 = np.concatenate((x_0,y_0))
+vortex_s_0 = np.concatenate((vortex_x_0,vortex_y_0))
 
+
+def calculate_velocity(x,y,vortex_x,vortex_y):
+    denominator = 1.0/ \
+        (np.cosh(twopi*(y - vortex_y)) - np.cos(twopi*(x - vortex_x)) + eps2)
+    # no need to remove self-induction singularity if eps > 0
+    # because sinh(0) = sin(0) = 0
+    ux = -halfN*np.sum( np.sinh(twopi*(y - vortex_y)) * denominator )
+    uy =  halfN*np.sum(  np.sin(twopi*(x - vortex_x)) * denominator )
+    return ux, uy
 
 def rhs(t,s,):
-    x, y = s[:N], s[N:]
     dsdt = np.zeros(2*N)
-
     for i in range(N):
-        denominator = 1.0/ \
-            (np.cosh(twopi*(y[i] - y)) - np.cos(twopi*(x[i] - x)) + eps2)
-        # no need to remove self-induction singularity if eps > 0
-        # sinh(0) = sin(0) = 0
-        dsdt[i]   = -halfN*np.sum( np.sinh(twopi*(y[i] - y)) * denominator )
-        dsdt[N+i] =  halfN*np.sum(  np.sin(twopi*(x[i] - x)) * denominator )
+        dsdt[i], dsdt[N+i] = calculate_velocity(s[i],s[N+i],s[:N],s[N:])
 
     return dsdt
 
@@ -44,7 +47,7 @@ t_start = 0.0
 t_end = 4.0
 
 sol = RK45(
-    rhs,t_start,s_0,t_end,
+    rhs,t_start,vortex_s_0,t_end,
     max_step=dt,
     vectorized=True
     )
@@ -52,8 +55,8 @@ sol = RK45(
 fig, ax = plt.subplots(
     1,1,layout='constrained',figsize=(16/2.54,6/2.54))
 
-ax.axis('equal')
-ax.set_ylim([-0.3,0.3])
+#ax.axis('equal')
+ax.set_ylim([-field_half_height,field_half_height])
 ax.set_xlim([0,domain_size])
 
 i = 0
@@ -61,8 +64,9 @@ t = t_start
 
 files = []
 while sol.t <= t_end - dt:
+    vortex_x, vortex_y = sol.y[:N], sol.y[N:]
     ax.plot(
-        sol.y[:N],sol.y[N:],
+        vortex_x,vortex_y,
         '-ok',
         linewidth=0.75,
         markersize=2,
@@ -77,10 +81,9 @@ while sol.t <= t_end - dt:
     print(f'{i:>5d} : {sol.t:.5e}')
     sol.step()
 
-    ax.lines[0].remove()
+    for l in ax.lines: l.remove()
 
-
-frames = np.stack([iio.imread(f) for f in files], axis = 0)
 
 print(f'Generating gif...')
+frames = np.stack([iio.imread(f) for f in files], axis = 0)
 iio.imwrite('output/vortex.gif', frames)
