@@ -7,24 +7,6 @@ from scipy.integrate import RK45
 import matplotlib.pyplot as plt
 import imageio.v3 as iio
 
-N = 400 # number of vortex
-epsilon = 0.5
-
-halfN = 1.0/(2.0*N)
-eps2 = epsilon**2
-twopi = 2*np.pi
-
-domain_size = 2.0
-field_half_height = 0.25
-
-intial_amplitude = 0.01
-initial_wave = intial_amplitude*np.sin(twopi*np.linspace(0,domain_size,N))
-
-vortex_x_0 = np.linspace(0,domain_size,N) + initial_wave
-vortex_y_0 = -initial_wave
-
-vortex_s_0 = np.concatenate((vortex_x_0,vortex_y_0))
-
 
 def calculate_velocity(x,y,vortex_x,vortex_y):
     denominator = 1.0/ \
@@ -33,7 +15,9 @@ def calculate_velocity(x,y,vortex_x,vortex_y):
     # because sinh(0) = sin(0) = 0
     ux = -halfN*np.sum( np.sinh(twopi*(y - vortex_y)) * denominator )
     uy =  halfN*np.sum(  np.sin(twopi*(x - vortex_x)) * denominator )
+
     return ux, uy
+
 
 def rhs(t,s,):
     dsdt = np.zeros(2*N)
@@ -42,48 +26,79 @@ def rhs(t,s,):
 
     return dsdt
 
-dt = 1.0/20
-t_start = 0.0
-t_end = 4.0
 
-sol = RK45(
-    rhs,t_start,vortex_s_0,t_end,
-    max_step=dt,
-    vectorized=True
-    )
+if __name__ == '__main__':
+    
+    # parameters
+    N = 400 # number of vortex
+    epsilon = 0.5 # vortex regularization parameter
 
-fig, ax = plt.subplots(
-    1,1,layout='constrained',figsize=(16/2.54,6/2.54))
+    dt = 1.0/20 # time-marching timestep, s
+    t_end = 4.0 # final time, s
 
-#ax.axis('equal')
-ax.set_ylim([-field_half_height,field_half_height])
-ax.set_xlim([0,domain_size])
+    intial_amplitude = 0.01 # vortex sheet wave amplitude
+    domain_size = 2.0
+    plot_half_height = 0.25
+    
+    halfN = 1.0/(2.0*N)
+    eps2 = epsilon**2
+    twopi = 2*np.pi
 
-i = 0
-t = t_start
+    initial_wave = intial_amplitude*np.sin(twopi*np.linspace(0,domain_size,N))
 
-files = []
-while sol.t <= t_end - dt:
-    vortex_x, vortex_y = sol.y[:N], sol.y[N:]
-    ax.plot(
-        vortex_x,vortex_y,
-        '-ok',
-        linewidth=0.75,
-        markersize=2,
+    vortex_x_0 = np.linspace(0,domain_size,N) + initial_wave
+    vortex_y_0 = -initial_wave
+    vortex_s_0 = np.concatenate((vortex_x_0,vortex_y_0))
+
+    sol = RK45(
+        rhs,0.0,vortex_s_0,t_end+dt,
+        max_step=dt,
+        vectorized=True
         )
-    ax.set_title(f't = {sol.t:0.3f}')
 
-    filename = f'output/solution_{i:04d}.png'
-    fig.savefig(filename)
-    files.append(filename)
+    fig, ax = plt.subplots(
+        1,1,
+        figsize=(16/2.54,6/2.54),
+        layout='constrained',
+        )
+    ax.axis('equal')
+    ax.set_ylim([-plot_half_height,plot_half_height])
+    ax.set_xlim([0,domain_size])
 
-    i += 1
-    print(f'{i:>5d} : {sol.t:.5e}')
-    sol.step()
+    i = 0
+    files = []
+    while sol.t <= t_end:
+        vortex_x, vortex_y = sol.y[:N], sol.y[N:]
+        ax.plot(
+            vortex_x,vortex_y,
+            '-ok',
+            linewidth=0.75,
+            markerfacecolor='white',
+            markersize=1,
+            )
+        ax.set_title(f't = {sol.t:0.2f}')
 
-    for l in ax.lines: l.remove()
+        filename = f'output/solution_{i:04d}.png'
+        fig.savefig(filename)
+        files.append(filename)
+
+        i += 1
+        print(f'{i:>5d} : {sol.t:.5e}')
+        sol.step()
+
+        for l in ax.lines: l.remove()
 
 
-print(f'Generating gif...')
-frames = np.stack([iio.imread(f) for f in files], axis = 0)
-iio.imwrite('output/vortex.gif', frames)
+    print(f'Generating gif...')
+    frames = np.stack([iio.imread(f) for f in files], axis = 0)
+    # make first and last frames to last more so it is easier to follow
+    gif_fps = 15
+    durations = np.ones(len(frames),dtype=int)*(1000//gif_fps) # in milliseconds
+    durations[0] *= 5
+    durations[-1] *= 10
+    iio.imwrite(
+        'output/vortex.gif',
+        frames,format='GIF',
+        loop=0, # loop forever
+        duration=durations.tolist(),
+        )
