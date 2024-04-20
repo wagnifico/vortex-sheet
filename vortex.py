@@ -1,5 +1,6 @@
 
 
+import os
 
 import numpy as np
 from scipy.integrate import RK45
@@ -30,6 +31,8 @@ def rhs(t,s,):
 if __name__ == '__main__':
     
     # parameters
+    output_folder = './output/'
+    os.makedirs(output_folder)
     N = 400 # number of vortex
     epsilon = 0.5 # vortex regularization parameter
 
@@ -78,7 +81,7 @@ if __name__ == '__main__':
             )
         ax.set_title(f't = {sol.t:0.2f}')
 
-        filename = f'output/solution_{i:04d}.png'
+        filename = f'{output_folder}/solution_{i:04d}.png'
         fig.savefig(filename)
         files.append(filename)
 
@@ -97,7 +100,7 @@ if __name__ == '__main__':
     durations[0] *= 5
     durations[-1] *= 10
     iio.imwrite(
-        'output/vortex.gif',
+        f'{output_folder}/vortex.gif',
         frames,format='GIF',
         loop=0, # loop forever
         duration=durations.tolist(),
