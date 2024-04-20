@@ -32,7 +32,7 @@ if __name__ == '__main__':
     
     # parameters
     output_folder = './output/'
-    os.makedirs(output_folder)
+    os.makedirs(output_folder,exist_ok=True)
     N = 400 # number of vortex
     epsilon = 0.5 # vortex regularization parameter
 
