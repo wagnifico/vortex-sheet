@@ -14,9 +14,8 @@ described in Cottet & Koumoutsakos 2000 [2] (p. 15), Krasny solution [3].
 
 [3] Robert Krasny 1986 Desingularization of periodic vortex sheet roll-up
     J. Comput. Phys. Vol 65, 2 https://doi.org/10.1016/0021-9991(86)90210-X.
-
 ```
 
 Run with `python vortex.py`
 
-Use numpy and scipy. List of used packages is available in `packages.txt`
+Based on numpy and scipy. List of used packages is available in `packages.txt`
